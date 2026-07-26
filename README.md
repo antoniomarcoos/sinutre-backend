@@ -5,7 +5,7 @@ Backend do **SiNutre — Sistema de Ingestão de Macronutrientes**.
 Stack: **TypeScript + Express + Prisma + SQLite**.
 
 > Versão didática usada em aula. Por enquanto cobre apenas:
-> - Login via GitHub OAuth
+> - Login via GitHub e Google OAuth
 > - Cadastro de uma refeição
 
 Estrutura mínima: apenas **rotas** e **controllers** (sem testes).
