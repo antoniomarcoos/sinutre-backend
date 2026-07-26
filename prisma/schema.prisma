@@ -17,8 +17,12 @@ datasource db {
 
 model User {
   id          Int       @id @default(autoincrement())
-  githubId    String    @unique
-  githubLogin String    @unique
+  
+  githubId    String?   @unique
+  githubLogin String?   @unique
+  googleId    String?   @unique
+  email       String?   @unique
+
   name        String
   birthDate   DateTime? @map("birth_date")
   avatarUrl   String?   @map("avatar_url")

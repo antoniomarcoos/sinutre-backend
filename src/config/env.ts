@@ -17,4 +17,9 @@ export const env = {
     clientSecret: required('GITHUB_CLIENT_SECRET'),
     callbackUrl: required('GITHUB_CALLBACK_URL'),
   },
+  google: {
+    clientId: required('GOOGLE_CLIENT_ID'),
+    clientSecret: required('GOOGLE_CLIENT_SECRET'),
+    callbackUrl: required('GOOGLE_CALLBACK_URL'),
+  },
 };
