@@ -4,7 +4,6 @@ import { prisma } from '../prisma';
 
 export const foodRouter = Router();
 
-//foods/
 foodRouter.get('/', requireAuth, async (req, res) => {
   const search = String(req.query.search ?? '');
   const foods = await prisma.food.findMany({
@@ -14,7 +13,7 @@ foodRouter.get('/', requireAuth, async (req, res) => {
         contains: search,
       }
     },
-    take: 10,
+    take: 20,
     orderBy: {
       name: 'asc',
     },
@@ -23,6 +22,31 @@ foodRouter.get('/', requireAuth, async (req, res) => {
   return res.json(foods);
 });
 
+foodRouter.get('/suggest', requireAuth, async (req, res) => {
+  const search = String(req.query.q ?? '');
+  
+  if (search.length < 2) {
+    return res.json([]);
+  }
+
+  const foods = await prisma.food.findMany({
+    where: {
+      OR: [
+        { userId: req.userId! },
+        { userId: null },
+      ],
+      name: {
+        contains: search,
+      }
+    },
+    take: 20,
+    orderBy: {
+      name: 'asc',
+    },
+  });
+
+  return res.json(foods);
+});
 
 foodRouter.post('/', requireAuth, async (req, res) => {
   const {
@@ -32,6 +56,17 @@ foodRouter.post('/', requireAuth, async (req, res) => {
     proteinPer100g,
     fatPer100g,
   } = req.body;
+
+  const existing = await prisma.food.findFirst({
+    where: {
+      name,
+      userId: req.userId,
+    },
+  });
+
+  if (existing) {
+    return res.status(400).json({ error: 'Alimento já cadastrado' });
+  }
 
   const food = await prisma.food.create({
     data: {
@@ -47,12 +82,72 @@ foodRouter.post('/', requireAuth, async (req, res) => {
   return res.status(201).json(food);
 });
 
-// deleta o alimento pelo id que vem na url
+foodRouter.put('/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const foodId = Number(id);
+
+  if (isNaN(foodId)) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+
+  const {
+    name,
+    caloriesPer100g,
+    carbsPer100g,
+    proteinPer100g,
+    fatPer100g,
+  } = req.body;
+
+  try {
+    const food = await prisma.food.findFirst({
+      where: {
+        id: foodId,
+        userId: req.userId,
+      },
+    });
+
+    if (!food) {
+      return res.status(404).json({ error: 'Alimento não encontrado' });
+    }
+
+    const updatedFood = await prisma.food.update({
+      where: { id: foodId },
+      data: {
+        name,
+        caloriesPer100g,
+        carbsPer100g,
+        proteinPer100g,
+        fatPer100g,
+      },
+    });
+
+    return res.json(updatedFood);
+  } catch (error) {
+    console.error('Erro ao atualizar alimento:', error);
+    return res.status(500).json({ error: 'Erro ao atualizar alimento' });
+  }
+});
+
 foodRouter.delete('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const foodId = Number(id);
 
+  if (isNaN(foodId)) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+
   try {
+    const food = await prisma.food.findFirst({
+      where: {
+        id: foodId,
+        userId: req.userId,
+      },
+    });
+
+    if (!food) {
+      return res.status(404).json({ error: 'Alimento não encontrado' });
+    }
+
     await prisma.mealFood.deleteMany({
       where: {
         foodId: foodId,
@@ -67,6 +162,7 @@ foodRouter.delete('/:id', requireAuth, async (req, res) => {
 
     return res.status(204).send();
   } catch (error) {
-    return res.status(400).json({ error: 'Erro ao excluir o alimento' });
+    console.error('Erro ao excluir alimento:', error);
+    return res.status(500).json({ error: 'Erro ao excluir o alimento' });
   }
 });

@@ -60,8 +60,8 @@ model Food {
   proteinPer100g  Float      @map("protein_per_100g")
   fatPer100g      Float      @map("fat_per_100g")
 
-  userId          Int        @map("user_id")
-  user            User       @relation(fields: [userId], references: [id])
+  userId          Int?       @map("user_id")
+  user            User?      @relation(fields: [userId], references: [id])
 
   meals           MealFood[]
 

@@ -9,7 +9,6 @@ export async function meals(
     where: {
       userId: req.userId,
     },
-
     include: {
       foods: {
         include: {
@@ -17,7 +16,6 @@ export async function meals(
         },
       },
     },
-
     orderBy: {
       createdAt: 'desc',
     },
@@ -27,34 +25,14 @@ export async function meals(
     const totals = meal.foods.reduce(
       (acc, item) => {
         const factor = item.foodG / 100;
-
         acc.grams += item.foodG;
-
-        acc.calories +=
-          item.food.caloriesPer100g *
-          factor;
-
-        acc.carbs +=
-          item.food.carbsPer100g *
-          factor;
-
-        acc.proteins +=
-          item.food.proteinPer100g *
-          factor;
-
-        acc.fats +=
-          item.food.fatPer100g *
-          factor;
-
+        acc.calories += item.food.caloriesPer100g * factor;
+        acc.carbs += item.food.carbsPer100g * factor;
+        acc.proteins += item.food.proteinPer100g * factor;
+        acc.fats += item.food.fatPer100g * factor;
         return acc;
       },
-      {
-        grams: 0,
-        calories: 0,
-        carbs: 0,
-        proteins: 0,
-        fats: 0,
-      },
+      { grams: 0, calories: 0, carbs: 0, proteins: 0, fats: 0 },
     );
 
     return {
@@ -63,9 +41,7 @@ export async function meals(
       type: meal.type,
       createdAt: meal.createdAt,
       eatTime: meal.eatTime,
-
       totals,
-
       items: meal.foods,
     };
   });
@@ -78,96 +54,46 @@ export async function createMeal(
   res: Response,
 ) {
   const userId = req.userId!;
-
-  const {
-    type,
-    eatTime,
-    description,
-    items,
-  } = req.body;
+  const { type, eatTime, description, items } = req.body;
 
   const parsedDate = new Date(eatTime);
-
   if (Number.isNaN(parsedDate.getTime())) {
     return res.status(400).json({ error: 'Data inválida.' });
   }
 
-  const meal = await prisma.$transaction(
-    async (tx) => {
-      const foods = await tx.food.findMany({
-        where: {
-          id: {
-            in: items.map(
-              (i: { foodId: number }) =>
-                i.foodId,
-            ),
-          },
+  const meal = await prisma.$transaction(async (tx) => {
+    const foods = await tx.food.findMany({
+      where: {
+        id: { in: items.map((i: { foodId: number }) => i.foodId) },
+        OR: [{ userId }, { userId: null }],
+      },
+    });
 
-          userId,
-        },
-      });
+    if (foods.length !== items.length) {
+      throw new Error('Alimento não encontrado');
+    }
 
-      if (foods.length !== items.length) {
-        throw new Error(
-          'Alimento não encontrado',
-        );
-      }
+    const meal = await tx.meal.create({
+      data: { type, eatTime: parsedDate, description, userId },
+    });
 
-      const meal = await tx.meal.create({
-        data: {
-          type,
-          eatTime: parsedDate,
-          description,
-          userId,
-        },
-      });
+    await tx.mealFood.createMany({
+      data: items.map((item: { foodId: number; grams: number }) => {
+        const food = foods.find((f) => f.id === item.foodId)!;
+        return {
+          mealId: meal.id,
+          foodId: food.id,
+          foodG: item.grams,
+          calories: (food.caloriesPer100g * item.grams) / 100,
+          carbs: (food.carbsPer100g * item.grams) / 100,
+          protein: (food.proteinPer100g * item.grams) / 100,
+          fat: (food.fatPer100g * item.grams) / 100,
+        };
+      }),
+    });
 
-      await tx.mealFood.createMany({
-        data: items.map(
-          (
-            item: {
-              foodId: number;
-              grams: number;
-            },
-          ) => {
-            const food = foods.find(
-              (f) => f.id === item.foodId,
-            )!;
-
-            return {
-              mealId: meal.id,
-
-              foodId: food.id,
-
-              foodG: item.grams,
-
-              calories:
-                (food.caloriesPer100g *
-                  item.grams) /
-                100,
-
-              carbs:
-                (food.carbsPer100g *
-                  item.grams) /
-                100,
-
-              protein:
-                (food.proteinPer100g *
-                  item.grams) /
-                100,
-
-              fat:
-                (food.fatPer100g *
-                  item.grams) /
-                100,
-            };
-          },
-        ),
-      });
-
-      return meal;
-    },
-  );
+    return meal;
+  });
 
   return res.status(201).json(meal);
 }
@@ -185,17 +111,8 @@ export async function getMeal(
 
   try {
     const meal = await prisma.meal.findFirst({
-      where: {
-        id: mealId,
-        userId: req.userId,
-      },
-      include: {
-        foods: {
-          include: {
-            food: true,
-          },
-        },
-      },
+      where: { id: mealId, userId: req.userId },
+      include: { foods: { include: { food: true } } },
     });
 
     if (!meal) {
@@ -205,25 +122,17 @@ export async function getMeal(
     const totals = meal.foods.reduce(
       (acc, item) => {
         const factor = item.foodG / 100;
-
         acc.grams += item.foodG;
         acc.calories += item.food.caloriesPer100g * factor;
         acc.carbs += item.food.carbsPer100g * factor;
         acc.proteins += item.food.proteinPer100g * factor;
         acc.fats += item.food.fatPer100g * factor;
-
         return acc;
       },
-      {
-        grams: 0,
-        calories: 0,
-        carbs: 0,
-        proteins: 0,
-        fats: 0,
-      },
+      { grams: 0, calories: 0, carbs: 0, proteins: 0, fats: 0 },
     );
 
-    const result = {
+    return res.json({
       id: meal.id,
       name: meal.description,
       type: meal.type,
@@ -231,9 +140,7 @@ export async function getMeal(
       eatTime: meal.eatTime,
       totals,
       items: meal.foods,
-    };
-
-    return res.json(result);
+    });
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao buscar refeição' });
   }
@@ -252,23 +159,15 @@ export async function deleteMeal(
 
   try {
     const meal = await prisma.meal.findFirst({
-      where: {
-        id: mealId,
-        userId: req.userId,
-      },
+      where: { id: mealId, userId: req.userId },
     });
 
     if (!meal) {
       return res.status(404).json({ error: 'Refeição não encontrada' });
     }
 
-    await prisma.mealFood.deleteMany({
-      where: { mealId: mealId },
-    });
-
-    await prisma.meal.delete({
-      where: { id: mealId },
-    });
+    await prisma.mealFood.deleteMany({ where: { mealId } });
+    await prisma.meal.delete({ where: { id: mealId } });
 
     return res.status(204).send();
   } catch (error) {
@@ -287,19 +186,11 @@ export async function updateMeal(
     return res.status(400).json({ error: 'ID inválido' });
   }
 
-  const {
-    type,
-    eatTime,
-    description,
-    items,
-  } = req.body;
+  const { type, eatTime, description, items } = req.body;
 
   try {
     const meal = await prisma.meal.findFirst({
-      where: {
-        id: mealId,
-        userId: req.userId,
-      },
+      where: { id: mealId, userId: req.userId },
     });
 
     if (!meal) {
@@ -307,23 +198,18 @@ export async function updateMeal(
     }
 
     const parsedDate = new Date(eatTime);
-
     if (Number.isNaN(parsedDate.getTime())) {
       return res.status(400).json({ error: 'Data inválida.' });
     }
 
     const updatedMeal = await prisma.$transaction(async (tx) => {
-      await tx.mealFood.deleteMany({
-        where: { mealId: mealId },
-      });
+      await tx.mealFood.deleteMany({ where: { mealId } });
 
       if (items && items.length > 0) {
         const foods = await tx.food.findMany({
           where: {
-            id: {
-              in: items.map((i: { foodId: number }) => i.foodId),
-            },
-            userId: req.userId,
+            id: { in: items.map((i: { foodId: number }) => i.foodId) },
+            OR: [{ userId: req.userId }, { userId: null }],
           },
         });
 
@@ -334,9 +220,8 @@ export async function updateMeal(
         await tx.mealFood.createMany({
           data: items.map((item: { foodId: number; grams: number }) => {
             const food = foods.find((f) => f.id === item.foodId)!;
-
             return {
-              mealId: mealId,
+              mealId,
               foodId: food.id,
               foodG: item.grams,
               calories: (food.caloriesPer100g * item.grams) / 100,
@@ -350,11 +235,7 @@ export async function updateMeal(
 
       return tx.meal.update({
         where: { id: mealId },
-        data: {
-          type,
-          eatTime: parsedDate,
-          description,
-        },
+        data: { type, eatTime: parsedDate, description },
       });
     });
 
