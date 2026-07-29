@@ -1,4 +1,3 @@
-```markdown
 # sinutre-back
 
 Backend do **SiNutre — Sistema de Ingestão de Macronutrientes**.
