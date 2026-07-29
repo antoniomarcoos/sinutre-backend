@@ -5,10 +5,31 @@ export async function meals(
   req: Request,
   res: Response,
 ) {
+  const userId = req.userId!;
+  const { startDate, endDate, type } = req.query;
+
+  const where: any = { userId };
+
+  if (startDate) {
+    where.eatTime = {
+      ...where.eatTime,
+      gte: new Date(String(startDate)),
+    };
+  }
+
+  if (endDate) {
+    where.eatTime = {
+      ...where.eatTime,
+      lte: new Date(String(endDate)),
+    };
+  }
+
+  if (type && type !== 'todos') {
+    where.type = String(type);
+  }
+
   const meals = await prisma.meal.findMany({
-    where: {
-      userId: req.userId,
-    },
+    where,
     include: {
       foods: {
         include: {
@@ -17,7 +38,7 @@ export async function meals(
       },
     },
     orderBy: {
-      createdAt: 'desc',
+      eatTime: 'desc',
     },
   });
 
@@ -96,6 +117,70 @@ export async function createMeal(
   });
 
   return res.status(201).json(meal);
+}
+
+export async function createMealFromSuggest(
+  req: Request,
+  res: Response,
+) {
+  const userId = req.userId!;
+  const { nome, alimentos, categoria } = req.body;
+
+  try {
+    const meal = await prisma.meal.create({
+      data: {
+        description: nome,
+        type: categoria || 'lunch',
+        eatTime: new Date(),
+        userId,
+      },
+    });
+
+    const alimentosData = [];
+
+    for (const a of alimentos) {
+      const food = await prisma.food.findFirst({
+        where: {
+          name: {
+            contains: a.nome,
+          },
+          OR: [
+            { userId },
+            { userId: null },
+          ],
+        },
+      });
+
+      if (!food) {
+        console.warn(`Alimento não encontrado: ${a.nome}`);
+        continue;
+      }
+
+      alimentosData.push({
+        mealId: meal.id,
+        foodId: food.id,
+        foodG: a.quantidade,
+        calories: (food.caloriesPer100g * a.quantidade) / 100,
+        carbs: (food.carbsPer100g * a.quantidade) / 100,
+        protein: (food.proteinPer100g * a.quantidade) / 100,
+        fat: (food.fatPer100g * a.quantidade) / 100,
+      });
+    }
+
+    if (alimentosData.length === 0) {
+      await prisma.meal.delete({ where: { id: meal.id } });
+      return res.status(400).json({ error: 'Nenhum alimento encontrado para salvar' });
+    }
+
+    await prisma.mealFood.createMany({
+      data: alimentosData,
+    });
+
+    return res.status(201).json(meal);
+  } catch (error) {
+    console.error('Erro ao salvar sugestão:', error);
+    return res.status(500).json({ error: 'Erro ao salvar refeição' });
+  }
 }
 
 export async function getMeal(

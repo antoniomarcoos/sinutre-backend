@@ -26,8 +26,11 @@ model User {
   name        String
   birthDate   DateTime? @map("birth_date")
   avatarUrl   String?   @map("avatar_url")
-  gender      String    @default("NAO_ESPECIFICADO") // GENDERCHOICE
+  gender      String?   @default("NAO_ESPECIFICADO")
   createdAt   DateTime  @default(now()) @map("created_at")
+
+  caloriesGoal Int      @default(2000) @map("calories_goal")
+  waterGoal    Int      @default(2000) @map("water_goal")
 
   meals       Meal[]
   foods       Food[]
@@ -63,6 +66,8 @@ model Food {
 
   userId          Int?       @map("user_id")
   user            User?      @relation(fields: [userId], references: [id])
+
+  isFavorite      Boolean    @default(false) @map("is_favorite")
 
   meals           MealFood[]
 

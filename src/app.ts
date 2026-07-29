@@ -6,6 +6,8 @@ import { mealsRoutes } from './routes/meals.routes';
 import { foodRouter } from './routes/food.routes';
 import { waterRouter } from './routes/water.routes';
 import { statsRouter } from './routes/stats.routes';
+import { userRouter } from './routes/user.routes';
+import { exportRouter } from './routes/export.routes';
 
 export const app = express();
 
@@ -21,3 +23,5 @@ app.use('/meals', mealsRoutes);
 app.use('/foods', foodRouter);
 app.use('/water', waterRouter);
 app.use('/stats', statsRouter);
+app.use('/user', userRouter);
+app.use('/export', exportRouter);

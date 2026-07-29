@@ -66,3 +66,25 @@ export async function getStats(req: Request, res: Response) {
 
   return res.json(result);
 }
+
+export async function getWeightHistory(req: Request, res: Response) {
+  const userId = req.userId!;
+  const { days = '30' } = req.query;
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - Number(days));
+
+  const logs = await prisma.weightLog.findMany({
+    where: {
+      userId,
+      createdAt: {
+        gte: startDate,
+      },
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  return res.json(logs);
+}

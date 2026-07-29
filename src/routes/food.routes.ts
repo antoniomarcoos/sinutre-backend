@@ -22,6 +22,20 @@ foodRouter.get('/', requireAuth, async (req, res) => {
   return res.json(foods);
 });
 
+foodRouter.get('/favorites', requireAuth, async (req, res) => {
+  const foods = await prisma.food.findMany({
+    where: {
+      userId: req.userId!,
+      isFavorite: true,
+    },
+    orderBy: {
+      name: 'asc',
+    },
+  });
+
+  return res.json(foods);
+});
+
 foodRouter.get('/all', requireAuth, async (req, res) => {
   const search = String(req.query.search ?? '');
   
@@ -118,6 +132,7 @@ foodRouter.put('/:id', requireAuth, async (req, res) => {
     carbsPer100g,
     proteinPer100g,
     fatPer100g,
+    isFavorite,
   } = req.body;
 
   try {
@@ -140,6 +155,7 @@ foodRouter.put('/:id', requireAuth, async (req, res) => {
         carbsPer100g,
         proteinPer100g,
         fatPer100g,
+        isFavorite: isFavorite !== undefined ? isFavorite : food.isFavorite,
       },
     });
 
