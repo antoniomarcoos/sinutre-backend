@@ -5,20 +5,23 @@ Backend do **SiNutre — Sistema de Ingestão de Macronutrientes**.
 
 Stack: **TypeScript + Express + Prisma + SQLite**.
 
-> Versão didática usada em aula. Por enquanto cobre apenas:
-> - Login via GitHub e Google OAuth
-> - CRUD completo de refeições
-> - CRUD completo de alimentos
-> - Importação de alimentos da TACO (opcional)
+## Funcionalidades
 
-Estrutura mínima: apenas **rotas** e **controllers** (sem testes).
+- Autenticação via GitHub e Google OAuth
+- CRUD completo de refeições
+- CRUD completo de alimentos
+- Filtros por data e categoria nas refeições
+- Metas personalizadas de calorias e água
+- Histórico de peso e altura
+- Exportação de dados em CSV
+- Importação de alimentos da TACO via seed (opcional)
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env          # preencha GITHUB_CLIENT_ID/SECRET, GOOGLE_CLIENT_ID/SECRET e JWT_SECRET
-npx prisma migrate dev        # cria prisma/dev.db e aplica as tabelas
+cp .env.example .env
+npx prisma migrate dev
 npm run dev
 ```
 
@@ -30,6 +33,7 @@ npm run alimentos:taco
 
 > Obtenha uma chave gratuita em https://taco.codivatech.com/api-keys
 
+## Banco de dados
+
 O banco é um único arquivo em `prisma/dev.db` (ignorado pelo git). Para zerar,
-basta apagar o arquivo e rodar `npx prisma migrate dev` de novo.
-```
+basta apagar o arquivo e rodar `npx prisma migrate dev` novamente.
