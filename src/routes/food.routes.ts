@@ -22,6 +22,28 @@ foodRouter.get('/', requireAuth, async (req, res) => {
   return res.json(foods);
 });
 
+foodRouter.get('/all', requireAuth, async (req, res) => {
+  const search = String(req.query.search ?? '');
+  
+  const foods = await prisma.food.findMany({
+    where: {
+      OR: [
+        { userId: req.userId! },
+        { userId: null },
+      ],
+      name: {
+        contains: search,
+      }
+    },
+    take: 30,
+    orderBy: {
+      name: 'asc',
+    },
+  });
+
+  return res.json(foods);
+});
+
 foodRouter.get('/suggest', requireAuth, async (req, res) => {
   const search = String(req.query.q ?? '');
   
