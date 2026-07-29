@@ -33,6 +33,7 @@ model User {
   foods       Food[]
   weightLogs  WeightLog[]
   healthData  HealthData[]
+  waterLogs   WaterLog[]
 
   @@map("users")
 }
@@ -109,4 +110,15 @@ model HealthData {
   user             User      @relation(fields: [userId], references: [id])
 
   @@map("health_data")
+}
+
+model WaterLog {
+  id        Int      @id @default(autoincrement())
+  amount    Int      @map("amount")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("water_logs")
 }
